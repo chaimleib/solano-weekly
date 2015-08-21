@@ -46,32 +46,58 @@ class SolanoReport < Array
     end
   end
 
+  def self.members
+    [
+      :session_id,
+      :qualified_session_name,
+      :plan_step_index,
+      :profile_name,
+      :started_by,
+      :created_at,
+      :summary_status,
+      :duration,
+      :worker_time,
+      :bundle_time,
+      :num_workers,
+      :branch,
+      :commit_id,
+      :started_tests_count,
+      :passed_tests_count,
+      :failed_tests_count,
+      :pending_tests_count,
+      :skipped_tests_count,
+      :error_tests_count
+    ]
+  end
+  
+  RawSolanoBuild = Struct.new("RawSolanoBuild", *members)  # raw string values
+  SolanoBuild = Struct.new("SolanoBuild", :_raw, *members) # rich values
+
   def initialize(path)
-    init_from_csv(path)
+    load_from_csv(path)
   end
 
-  def init_from_csv(path)
+  def load_from_csv(path)
     builds = CSV.read(path)
     keys = builds.shift.map &:to_sym  # first line is column labels
-
-    @raw_build_t = Struct.new("RawSolanoBuild", *keys)  # raw string values
-    keys.unshift :_raw
-    @build_t = Struct.new("SolanoBuild", *keys)         # rich values
-    
+    if keys != self.class.members
+      puts "Expected: #{self.class.members}"
+      puts "Given: #{keys}"
+      raise "Given CSV headings do not match expected!"
+    end
     builds.each{ |b| _add_build(b) }
   end
 
   def _add_build(b)
     # convert b into rich values, and push onto end of self
-    keys = @build_t.members
-    kv_pairs = keys.zip [b, *b]  # [raw data, data to be converted]
+    kv_pairs = SolanoBuild.members.zip [b, *b]  # [raw data, data to be converted]
     converted = kv_pairs.map{|k, v| 
       if k == :_raw
-        @raw_build_t.new(*v)
+        RawSolanoBuild.new(*v)
       else
         Converter.convert(k, v)
       end
     }
-    self << @build_t.new(*converted)
+    self << SolanoBuild.new(*converted)
   end
 end
