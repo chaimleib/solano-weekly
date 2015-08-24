@@ -1,9 +1,14 @@
 require 'csv'
+require 'active_support/all'
 
 class SolanoReport < Array
   class Converter
     def self._date_time(v)
-      DateTime.parse v
+      DateTime.parse(v)
+    end
+
+    def self._time(v)
+      Time.parse(v)
     end
 
     def self._int(v)
@@ -23,7 +28,7 @@ class SolanoReport < Array
     end
 
     @@static_keys = {
-      created_at: :_date_time,
+      created_at: :_time,
       summary_status: :_sym,
       duration: :_float,
       worker_time: :_float,
@@ -73,11 +78,7 @@ class SolanoReport < Array
   RawSolanoBuild = Struct.new("RawSolanoBuild", *members)  # raw string values
   SolanoBuild = Struct.new("SolanoBuild", :_raw, *members) # rich values
 
-  def initialize(path)
-    load_from_csv(path)
-  end
-
-  def load_from_csv(path)
+  def load_csv(path)
     builds = CSV.read(path)
     keys = builds.shift.map &:to_sym  # first line is column labels
     if keys != self.class.members
@@ -86,6 +87,7 @@ class SolanoReport < Array
       raise "Given CSV headings do not match expected!"
     end
     builds.each{ |b| _add_build(b) }
+    self
   end
 
   def _add_build(b)
@@ -99,5 +101,25 @@ class SolanoReport < Array
       end
     }
     self << SolanoBuild.new(*converted)
+  end
+
+  def group_by_day
+    each_with_object({}){ |build, retval|
+      m = build.created_at.midnight
+      if !retval.has_key? m
+        retval[m] = self.class.new
+      end
+      retval[m] << build
+    }
+  end
+
+  def group_by_branch
+    each_with_object({}){ |build, retval|
+      m = build.branch
+      if !retval.has_key? m
+        retval[m] = self.class.new
+      end
+      retval[m] << build
+    }
   end
 end
