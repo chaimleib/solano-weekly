@@ -28,7 +28,7 @@ class SolanoReport < Array
     end
 
     @@static_keys = {
-      created_at: :_time,
+      created_at: :_date_time,
       summary_status: :_sym,
       duration: :_float,
       worker_time: :_float,
@@ -103,13 +103,15 @@ class SolanoReport < Array
     self << SolanoBuild.new(*converted)
   end
 
-  def group_by_day
+  def group_by_date(tz=TZInfo::Timezone.get("UTC"))
     each_with_object({}){ |build, retval|
-      m = build.created_at.midnight
-      if !retval.has_key? m
-        retval[m] = self.class.new
+      utc = build.created_at.utc
+      local = utc.in_time_zone(tz)
+      key = local.midnight.iso8601
+      if !retval.has_key? key
+        retval[key] = self.class.new
       end
-      retval[m] << build
+      retval[key] << build
     }
   end
 
