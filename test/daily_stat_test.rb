@@ -37,7 +37,7 @@ def make_statistics(week, report, tz)  # report is full, ungrouped SolanoReport
 end
 
 def time_red(failures, report, tz)  # report is full, ungrouped SolanoReport
-  return 0.seconds if failures.empty?
+  return 0.0.seconds if failures.empty?
 
   failures = failures.sort_by(&:created_at)
   branches = report.group_by_branch.each_with_object({}) {|(branch, subreport), by_date|
@@ -58,7 +58,7 @@ def time_red(failures, report, tz)  # report is full, ungrouped SolanoReport
     branches[build.branch][prev_index]
   end
 
-  retval = 0.seconds
+  retval = 0.0.seconds
   p = prev_build.call failures.first
   local_time = failures.first.created_at.in_time_zone(tz)
   day_start = local_time.midnight
