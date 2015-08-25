@@ -1,6 +1,25 @@
 # solano-weekly
 
-Parses 30-day CSV reports and reports on the green-ness of each branch.
+Parses 30-day CSV reports and shows the green-ness of each branch.
+
+## Requirements
+
+Ruby 2.x
+
+## Usage
+
+1. Run
+    
+        bundle
+
+
+1. Go to Solano, and get the 30-day CSV reports for every branch you would like to see.
+2. Put the CSVs in test/data. No renaming should be necessary.
+3. Run
+    
+        ruby test/stat_writer.rb
+
+4. The output should appear at test/output/weekly.xlsx
 
 ## Spec
 For the week of Aug 17th to Aug 22nd, we need to create a solano build failure report. The purpose of the report is to report out for each day of week, per branch
@@ -22,3 +41,4 @@ How we can achieve this is..
 1) first we go into solano, https://ci.solanolabs.com/, and download the 30 day history dump for all builds we need. Click on each build, say master, click on the blue Action button, and download the 30 day dump
 
 2) we then write a script to parse through all the build files to generate the report, but we only need it for the last 7 days, not 30
+
