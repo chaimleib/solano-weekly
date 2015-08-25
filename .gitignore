@@ -4,4 +4,4 @@
 *.tmp
 secrets.yml
 /test/data/
-
+/test/output/

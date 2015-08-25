@@ -7,15 +7,27 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
+    axlsx (2.0.1)
+      htmlentities (~> 4.3.1)
+      nokogiri (>= 1.4.1)
+      rubyzip (~> 1.0.0)
     coderay (1.1.0)
+    fileutils (0.7)
+      rmagick (>= 2.13.1)
+    htmlentities (4.3.4)
     i18n (0.7.0)
     json (1.8.3)
     method_source (0.8.2)
+    mini_portile (0.6.2)
     minitest (5.8.0)
+    nokogiri (1.6.6.2)
+      mini_portile (~> 0.6.0)
     pry (0.10.1)
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
       slop (~> 3.4)
+    rmagick (2.15.4)
+    rubyzip (1.0.0)
     slop (3.6.0)
     thread_safe (0.3.5)
     tzinfo (1.2.2)
@@ -28,6 +40,8 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport
+  axlsx
+  fileutils
   pry
   tzinfo-data
 
