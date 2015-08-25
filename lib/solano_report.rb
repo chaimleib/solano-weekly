@@ -19,6 +19,10 @@ class SolanoReport < Array
       v.to_f
     end
 
+    def self._seconds(v)
+      v.to_f.seconds
+    end
+
     def self._bool(v)
       !!v
     end
@@ -30,9 +34,9 @@ class SolanoReport < Array
     @@static_keys = {
       created_at: :_date_time,
       summary_status: :_sym,
-      duration: :_float,
-      worker_time: :_float,
-      bundle_time: :_float,
+      duration: :_seconds,
+      worker_time: :_seconds,
+      bundle_time: :_seconds,
       num_workers: :_int,
     }
 
@@ -76,7 +80,11 @@ class SolanoReport < Array
   end
   
   RawSolanoBuild = Struct.new("RawSolanoBuild", *members)  # raw string values
-  SolanoBuild = Struct.new("SolanoBuild", :_raw, *members) # rich values
+  SolanoBuild = Struct.new("SolanoBuild", :_raw, *members) do # rich values
+    def finished_at
+      created_at + duration.seconds
+    end
+  end
 
   def load_csv(path)
     builds = CSV.read(path)
@@ -123,5 +131,13 @@ class SolanoReport < Array
       end
       retval[m] << build
     }
+  end
+
+  def sort(*args, **kwargs)
+    self.class.new super
+  end
+
+  def sort_by(*args, **kwargs)
+    self.class.new super(*args, *kwargs)
   end
 end
