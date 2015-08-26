@@ -84,7 +84,7 @@ class SolanoReport < Array
   RawSolanoBuild = Struct.new("RawSolanoBuild", *members)  # raw string values
   SolanoBuild = Struct.new("SolanoBuild", :_raw, *members) do # rich values
     def finished_at
-      created_at + duration.seconds
+      created_at + duration
     end
   end
 
@@ -97,7 +97,7 @@ class SolanoReport < Array
       raise "Given CSV headings do not match expected!"
     end
     builds.each{ |b| _add_build(b) }
-    self
+    self[0..-1] = self.sort_by(&:created_at)
   end
 
   def _add_build(b)
@@ -113,9 +113,13 @@ class SolanoReport < Array
     self << SolanoBuild.new(*converted)
   end
 
+  def branches
+    map(&:branch).uniq.sort
+  end
+
   def group_by_date(tz=UTC)
     each_with_object({}){ |build, retval|
-      utc = build.created_at.utc
+      utc = build.created_at.in_time_zone(UTC)
       local = utc.in_time_zone(tz)
       key = local.midnight.iso8601
       if !retval.has_key? key
@@ -147,90 +151,118 @@ class SolanoReport < Array
     self.class.new super(*args, *kwargs, &block)
   end
 
+  def failures
+    select{|build| build.summary_status == :failed}
+  end
+
   def select_period(start:DateTime.now, duration: 1.day)
-    start = start.utc
+    start = start.in_time_zone(UTC)
     stop = start + duration
     select do |build|
-      utc = build.created_at.utc
+      utc = build.created_at.in_time_zone(UTC)
       start <= utc && utc <= stop
     end
   end
 
-  def daily_statistics(tz:UTC, start:nil, duration:nil)
-    by_branch = group_by_branch
-    by_date_by_branch = group_by_date(tz).each_with_object({}) do |(d, subreport), h|
-      h[d] = subreport.group_by_branch
-    end
-    unfiltered = by_date_by_branch.each_with_object({}) do |(day, day_branches), stats|
-      # day_branches: hash of SolanoReports by branch name
-      dt = DateTime.parse(day)
-      stats[dt] = day_branches.each_with_object({}) do |(branch, subreport), substats|
-        failures = subreport.select{|build| build.summary_status == :failed}
+  def daily_statistics(tz: UTC, start: nil, duration: nil)
+    start = start.in_time_zone(tz)
+    meta = {
+      tz: tz,
+      start: start,
+      duration: duration,
+    }
 
-        substats[branch] = {
-          fail_count: failures.length,
-          red_time: subreport.status_duration(
-            status: :failed,
-            parent: by_branch[branch],
-            start: dt,
-            duration: 1.day)
-        }
-      end
+    by_branch = group_by_branch
+    stats = by_branch.each_with_object({}) do |(branch, subreport), stats|
+      stats[branch] = subreport._branch_daily_statistics(meta)
     end
-    return unfiltered unless start.present?
-    filtered = unfiltered.select{|dt, branches| start <= dt}
+
+    meta[:branches] = by_branch.keys
+    {
+      by_branch: stats,
+      meta: meta,
+    }
+  end
+
+  def _branch_daily_statistics(tz: UTC, start: nil, duration: nil)
+    # gives stats for one branch
+    return {} if empty?
+    unless self.branches.length == 1
+      puts "Branches found: #{self.branches}"
+      raise "_branch_daily_statistics only works on SolanoReports with one branch"
+    end
+
+    by_date = group_by_date(tz)
+    all_days = by_date.each_with_object({}) do |(day, day_builds), stats|
+      dt = day.in_time_zone(tz)
+      stats[dt] = {
+        fail_count: day_builds.failures.length,
+        red_time: status_duration(status: :failed, start: dt, duration: 1.day)
+      }
+    end
+
+    ## Date filtering
+    return all_days unless start.present?
+    filtered = all_days.select{|dt, branches| start <= dt}
     return filtered unless duration.present?
     filtered = filtered.select{|dt, branches| dt < start + duration}
     filtered
   end
 
   def build_index(build)
+    # returns the position of the given build, or nil
     return nil unless build.present?
     index{|other_build| other_build.session_id == build.session_id}
   end
 
   def next_build(build)
+    # returns the build after the one given, or nil
     i = build_index(build)
     return nil if i.nil?
     self[i + 1]
   end
 
   def prev_build(build)
+    # returns the build previous to the one given, or nil
     i = build_index(build)
     return nil if i.nil? || i <= 0
     self[i - 1]
   end
 
   def status_duration(status: :failed, parent: [], start: nil, duration: nil)
+    # how long the build was in the given state (in days)
     parent = self unless parent.present?
-    focus = select{|build| build.summary_status == status}.sort_by(&:created_at)
+    focus = self.
+      select{|build| build.summary_status == status}.
+      select_period(start: start, duration: duration)
     return 0.0.days if focus.empty?
 
-    retval = 0.0.days
+    retval = 0.0.seconds
     if start.present?
       p = parent.prev_build focus.first
-      utc = focus.first.created_at.utc
-      start = start.utc
+      utc = focus.first.created_at.in_time_zone(UTC)
+      start = start.in_time_zone(UTC)
       stop = start + duration
       if p.present? && p.summary_status == status
-        interval = (utc - start).days
+        interval = (utc - start).seconds
         retval += interval
       end
     end
     focus.each do |build|
-      n = next_build build
+      n = parent.next_build build
       if n.present?
-        n_utc = n.created_at.utc
+        n_utc = n.created_at.in_time_zone(UTC)
+        n_utc = stop if duration.present? && stop <= n_utc
       elsif duration.present?
         n_utc = stop
       else
         break
       end
 
-      utc = build.created_at.utc
-      interval = (n_utc - utc).days
+      utc = build.created_at.in_time_zone(UTC)
+      interval = (n_utc - utc).seconds
       retval += interval
     end
-    retval
+    retval = (retval/86400.0.seconds).days
   end
 end

@@ -12,7 +12,7 @@ end
 report = load_report
 stats = report.daily_statistics(
   tz: MyTZ,
-  start: DateTime.parse("2015-08-17T00:00:00-7"),
+  start: "2015-08-17".in_time_zone(MyTZ),
   duration: 7.days
 )
 binding.pry
