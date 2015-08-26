@@ -22,8 +22,8 @@ stats = report.daily_statistics(
   start: start,
   duration: duration
 )
-stats[:meta].merge({
-  in_files: in_files,
+stats[:meta].merge!({
+  in_files: in_files.sort,
 })
 
 FileUtils.mkdir_p out_dir

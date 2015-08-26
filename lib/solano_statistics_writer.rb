@@ -62,10 +62,29 @@ module SolanoStatisticsWriter
       sheet.column_widths 18, *[7, 13]*7
     end
 
+    self.meta_sheet(wb, meta)
+
     ## Serialize
     p.use_shared_strings = true  # for Apple Numbers xlsx import
     p.serialize ofile
     puts "  => #{ofile}"
+  end
+
+  def self.meta_sheet(wb, meta)
+    wb.add_worksheet(name: "Meta") do |sheet|
+      key_style = sheet.styles.add_style(b: true)
+      meta.merge!({
+        created_on: Time.now.in_time_zone(meta[:tz]),
+      })
+      meta.each do |k, v|
+        if v.is_a? ActiveSupport::Duration
+          v = "#{v/1.day}.days"
+        elsif v.is_a? Array
+          v = v.join("\n")
+        end
+        sheet.add_row [k.to_s, v.to_s], style: [key_style, nil]
+      end
+    end
   end
 
   def self.humanize_duration(d)

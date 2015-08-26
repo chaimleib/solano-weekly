@@ -177,7 +177,7 @@ class SolanoReport < Array
       stats[branch] = subreport._branch_daily_statistics(meta)
     end
 
-    meta[:branches] = by_branch.keys
+    meta[:branches] = by_branch.keys.sort
     {
       by_branch: stats,
       meta: meta,
