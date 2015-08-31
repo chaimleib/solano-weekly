@@ -44,7 +44,7 @@ module SolanoStatisticsWriter
       sheet.merge_cells("A1:A2")
 
       ## Data rows
-      by_branch.each do |branch, by_date|
+      by_branch.sort.each do |branch, by_date|
         row = [branch]
 
         dates.each do |dt|
