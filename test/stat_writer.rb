@@ -5,7 +5,7 @@ require_relative '../lib/solano_statistics_writer'
 tz = TZInfo::Timezone.get('America/Los_Angeles')
 in_files = Dir.glob "#{File.dirname __FILE__}/data/*.csv"
 out_dir = "#{File.dirname __FILE__}/output"
-start = "2015-08-24".in_time_zone(tz)
+start = "2015-08-31".in_time_zone(tz)
 duration = 7.days
 
 ssw = SolanoStatisticsWriter
