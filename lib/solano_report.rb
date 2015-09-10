@@ -164,7 +164,7 @@ class SolanoReport < Array
     end
   end
 
-  def daily_statistics(tz: UTC, start: nil, duration: nil)
+  def failure_statistics_by_day(tz: UTC, start: nil, duration: nil)
     start = start.in_time_zone(tz)
     meta = {
       tz: tz,
@@ -229,6 +229,18 @@ class SolanoReport < Array
     self[i - 1]
   end
 
+  def first_build_after(dt)
+    bsearch{|build|
+      build.created_at.in_time_zone(UTC) >= dt.in_time_zone(UTC)
+    }
+  end
+
+  def last_build_before(dt)
+    reverse.bsearch{|build|
+      build.created_at.in_time_zone(UTC) < dt.in_time_zone(UTC)
+    }
+  end
+
   def status_duration(status: :failed, parent: [], start: nil, duration: nil)
     # how long the build was in the given state (in days)
     parent = self unless parent.present?
@@ -265,4 +277,68 @@ class SolanoReport < Array
     end
     retval = (retval/86400.0.seconds).days
   end
+
+  def with_status_during(status: :failed, parent: [], start: nil, duration: nil)
+    # return all builds that had the given status in the specified interval
+    start = start.in_time_zone(UTC)
+    parent = self unless parent.present?
+
+    focus = self.class.new
+    pre = last_build_before start if start.present?
+    focus << pre if pre.present? and pre.summary_status == status
+
+    focus += self.
+      select{|build| build.summary_status == status}.
+      select_period(start: start, duration: duration)
+
+    return focus
+  end
+
+
+
+  def fail_times_by_branch(tz: UTC, start: nil, duration: nil)
+    start = start.in_time_zone(tz)
+    meta = {
+      tz: tz,
+      start: start,
+      duration: duration,
+    }
+
+    by_branch = group_by_branch
+    stats = by_branch.each_with_object({}) do |(branch, subreport), stats|
+      stats[branch] = subreport._branch_fail_times(meta)
+    end
+
+    meta[:branches] = by_branch.keys.sort
+    {
+      by_branch: stats,
+      meta: meta,
+    }
+  end
+
+  def _branch_fail_times(tz: UTC, start: nil, duration: nil)
+    start = start.in_time_zone(UTC)
+
+    failures = with_status_during(start: start, duration: duration)
+    return [] if failures.empty?
+
+    retval = failures.map do |fail|
+      duration = nil
+      n = next_build fail
+
+      if n.present?
+        fail_start = fail.created_at.in_time_zone(UTC)
+        fail_stop = n.created_at.in_time_zone(UTC)
+        duration = (fail_stop - fail_start).seconds
+      end
+
+      {
+        id: fail.session_id,
+        start: fail.created_at.in_time_zone(tz),
+        duration: duration
+      }
+    end
+    retval
+  end
+
 end

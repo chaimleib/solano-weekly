@@ -22,10 +22,11 @@ options = {
   start: start,
   duration: duration
 }
-stats = report.failure_statistics_by_day(options)
+stats = report.fail_times_by_branch(options)
 stats[:meta].merge!({
   in_files: in_files.sort,
 })
 
+
 FileUtils.mkdir_p out_dir
-ssw.write_daily_statistics(data: stats, ofile:"#{out_dir}/solano_week_#{start.strftime '%Y-%m-%d'}.xlsx")
+ssw.write_fail_times(data: stats, ofile:"#{out_dir}/solano_fail_list_week_#{start.strftime '%Y-%m-%d'}.xlsx")
