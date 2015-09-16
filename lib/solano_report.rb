@@ -164,7 +164,7 @@ class SolanoReport < Array
     end
   end
 
-  def failure_statistics_by_day(tz: UTC, start: nil, duration: nil)
+  def summary(tz: UTC, start: nil, duration: nil)
     start = start.in_time_zone(tz)
     meta = {
       tz: tz,
@@ -179,7 +179,7 @@ class SolanoReport < Array
 
     meta[:branches] = by_branch.keys.sort
     {
-      by_branch: stats,
+      summary: stats,
       meta: meta,
     }
   end
@@ -296,7 +296,7 @@ class SolanoReport < Array
 
 
 
-  def fail_times_by_branch(tz: UTC, start: nil, duration: nil)
+  def fail_times(tz: UTC, start: nil, duration: nil)
     start = start.in_time_zone(tz)
     meta = {
       tz: tz,
@@ -311,7 +311,7 @@ class SolanoReport < Array
 
     meta[:branches] = by_branch.keys.sort
     {
-      by_branch: stats,
+      fail_times: stats,
       meta: meta,
     }
   end

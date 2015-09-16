@@ -4,20 +4,51 @@ module SolanoStatisticsWriter
   require_relative './solano_report'
   require 'axlsx'
 
-  def self.write_fail_times(data: {}, ofile: nil)
-    ## Preformatting
+  def self.write_weekly_report(data: {}, ofile: nil, &content)
+    ## Setup
     meta = data[:meta]
     dt = meta[:start].in_time_zone(meta[:tz])
     human_date = dt.strftime("%x (%Z)").gsub('/', '-')
-    duration = meta[:duration]
-
     title = "Solano - Week of #{human_date}"
     puts title
 
-    by_branch = data[:by_branch]
-
     p = Axlsx::Package.new
     wb = p.workbook
+    
+    ## Compile
+    if content.nil?
+      add_summary(wb, data)
+      add_fail_times(wb, data)
+      add_meta(wb, data)
+    else
+      content.call(wb, data)
+    end
+
+    ## Serialize
+    p.use_shared_strings = true  # for Apple Numbers xlsx import
+    p.serialize ofile
+    puts "  => #{ofile}"
+  end
+
+
+  def self.write_fail_times(data: {}, ofile: nil)
+    write_weekly_report(data: data, ofile: ofile) do |wb, data|
+      add_fail_times(wb, data)
+      add_meta(wb, data)
+    end
+  end
+
+  def self.write_summary(data: {}, ofile: nil)
+    write_weekly_report(data: data, ofile: ofile) do |wb, data|
+      add_summary(wb, data)
+      add_meta(wb, data)
+    end
+  end
+
+  def self.add_fail_times(wb, data)
+    ## Preformatting
+    meta = data[:meta]
+    by_branch = data[:fail_times]
 
     by_branch.keys.sort.each do |branch|
       ## Add worksheet
@@ -42,9 +73,9 @@ module SolanoStatisticsWriter
             fail_duration = '--'
           else
             fail_stop = fail[:start] + fail[:duration]
-            fail_duration = self.humanize_duration(fail[:duration])
+            fail_duration = humanize_duration(fail[:duration])
           end
-          duration
+
           sheet.add_row [
             fail[:id],
             fail[:start].to_s,
@@ -54,34 +85,21 @@ module SolanoStatisticsWriter
         end
       end
     end
-
-    self.meta_sheet(wb, meta)
-
-    ## Serialize
-    p.use_shared_strings = true  # for Apple Numbers xlsx import
-    p.serialize ofile
-    puts "  => #{ofile}"
   end
 
-  def self.write_daily_statistics(data: {}, ofile: nil)
+  def self.add_summary(wb, data)
     ## Preformatting
     meta = data[:meta]
     dt = meta[:start].in_time_zone(meta[:tz])
-    human_date = dt.strftime("%x (%Z)").gsub('/', '-')
     duration = meta[:duration]
     last_day_offset = (duration - 1.day)/1.day
     dates = (0..last_day_offset).map{|offset| dt + offset.days}
     formatted_dates = dates.map{|d| d.strftime("%A, %x")}
 
-    title = "Solano - Week of #{human_date}"
-    puts title
-
-    by_branch = data[:by_branch]
+    by_branch = data[:summary]
 
     ## XLSX layout
-    p = Axlsx::Package.new
-    wb = p.workbook
-    wb.add_worksheet(name: title) do |sheet|
+    wb.add_worksheet(name: "Summary") do |sheet|
       ## Header rows
       head_style = sheet.styles.add_style(b: true, alignment: {horizontal: :center})
       data_style = sheet.styles.add_style(alignment: {horizontal: :right})
@@ -120,16 +138,11 @@ module SolanoStatisticsWriter
       ## Final tidy
       sheet.column_widths 18, *[7, 13]*7
     end
-
-    self.meta_sheet(wb, meta)
-
-    ## Serialize
-    p.use_shared_strings = true  # for Apple Numbers xlsx import
-    p.serialize ofile
-    puts "  => #{ofile}"
   end
 
-  def self.meta_sheet(wb, meta)
+  def self.add_meta(wb, data)
+    meta = data[:meta]
+
     wb.add_worksheet(name: "Meta") do |sheet|
       key_style = sheet.styles.add_style(b: true)
       meta.merge!({
