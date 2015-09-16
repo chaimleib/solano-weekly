@@ -3,9 +3,10 @@ require 'pry'
 require_relative '../lib/solano_statistics_writer'
 
 tz = TZInfo::Timezone.get('America/Los_Angeles')
-in_files = Dir.glob "#{File.dirname __FILE__}/data/*.csv"
-out_dir = "#{File.dirname __FILE__}/output"
-start = "2015-08-31".in_time_zone(tz)
+root_dir = File.expand_path "#{File.dirname __FILE__}/.."
+in_files = Dir.glob "#{root_dir}/data/*.csv"
+out_dir = "#{root_dir}/output"
+start = "2015-09-07".in_time_zone(tz)
 duration = 7.days
 
 ssw = SolanoStatisticsWriter

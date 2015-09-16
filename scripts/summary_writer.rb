@@ -3,8 +3,9 @@ require 'pry'
 require_relative '../lib/solano_statistics_writer'
 
 tz = TZInfo::Timezone.get('America/Los_Angeles')
-in_files = Dir.glob "#{File.dirname __FILE__}/data/*.csv"
-out_dir = "#{File.dirname __FILE__}/output"
+root_dir = File.expand_path "#{File.dirname __FILE__}/.."
+in_files = Dir.glob "#{root_dir}/data/*.csv"
+out_dir = "#{root_dir}/output"
 start = "2015-08-31".in_time_zone(tz)
 duration = 7.days
 
@@ -22,11 +23,11 @@ options = {
   start: start,
   duration: duration
 }
-stats = report.fail_times options
+stats = report.summary options
 
 stats[:meta].merge!({
   in_files: in_files.sort,
 })
 
 FileUtils.mkdir_p out_dir
-ssw.write_fail_times(data: stats, ofile:"#{out_dir}/solano_fail_list_week_#{start.strftime '%Y-%m-%d'}.xlsx")
+ssw.write_summary(data: stats, ofile:"#{out_dir}/solano_summary_week_#{start.strftime '%Y-%m-%d'}.xlsx")
