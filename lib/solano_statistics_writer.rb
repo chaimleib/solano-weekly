@@ -1,4 +1,5 @@
 require_relative './solano_report'
+require_relative './natural_sort'
 
 module SolanoStatisticsWriter
   require_relative './solano_report'
@@ -50,7 +51,7 @@ module SolanoStatisticsWriter
     meta = data[:meta]
     by_branch = data[:fail_times]
 
-    by_branch.keys.sort.each do |branch|
+    NaturalSort.natural_sort(by_branch.keys).each do |branch|
       ## Add worksheet
       wb.add_worksheet(name: "#{branch} Failures") do |sheet|
         # Styles
@@ -121,7 +122,7 @@ module SolanoStatisticsWriter
       sheet.merge_cells("A1:A2")
 
       ## Data rows
-      by_branch.keys.sort.each do |branch|
+      NaturalSort.natural_sort(by_branch.keys).each do |branch|
         by_date = by_branch[branch]
         row = [branch]
 
