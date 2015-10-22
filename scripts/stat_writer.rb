@@ -6,7 +6,7 @@ tz = TZInfo::Timezone.get('America/Los_Angeles')
 root_dir = File.expand_path "#{File.dirname __FILE__}/.."
 in_files = Dir.glob "#{root_dir}/data/*.csv"
 out_dir = "#{root_dir}/output"
-start = "2015-10-12".in_time_zone(tz)
+start = "2015-10-19".in_time_zone(tz)
 duration = 7.days
 
 def load_report(files)
