@@ -1,0 +1,11 @@
+solano:
+  url: 'https://ci.solanolabs.com/dashboard'
+  user: 'user@example.com'
+  password: 'password'
+branches:
+- master
+- '^[0-9]{3}(_0_[0-9]+)?_release$'
+filter:
+  started:
+    time_ago: 7
+    unit: days

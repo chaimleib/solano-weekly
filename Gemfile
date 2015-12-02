@@ -8,3 +8,5 @@ gem 'fileutils'
 
 gem 'awesome_print'
 gem 'pry'
+
+gem 'selenium-webdriver'
