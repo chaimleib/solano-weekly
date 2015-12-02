@@ -6,4 +6,5 @@ gem 'tzinfo-data'
 gem 'axlsx'
 gem 'fileutils'
 
+gem 'awesome_print'
 gem 'pry'
