@@ -1,9 +1,8 @@
-require_relative './solano_report'
-require_relative './natural_sort'
-
 module SolanoStatisticsWriter
+  require_relative './natural_sort'
   require_relative './solano_report'
   require 'axlsx'
+  require 'pry'
 
   def self.write_weekly_report(data: {}, ofile: nil, &content)
     ## Setup
@@ -51,38 +50,60 @@ module SolanoStatisticsWriter
     meta = data[:meta]
     by_branch = data[:fail_times]
 
-    NaturalSort.natural_sort(by_branch.keys).each do |branch|
-      ## Add worksheet
-      wb.add_worksheet(name: "#{branch} Failures") do |sheet|
-        # Styles
-        head_style = sheet.styles.add_style(b: true, alignment: {horizontal: :center})
-        data_style = sheet.styles.add_style(alignment: {horizontal: :right})
-        text_style = sheet.styles.add_style(alignment: {horizontal: :left})
-        
-        # Header
-        sheet.add_row ["Id", "Failed at", "Until", "Duration"], style: [head_style]*4
+    ## Add worksheet
+    wb.add_worksheet(name: "Data") do |sheet|
+      # Styles
+      head_style = sheet.styles.add_style(b: true, alignment: {horizontal: :center})
+      data_style = sheet.styles.add_style(alignment: {horizontal: :right})
+      text_style = sheet.styles.add_style(alignment: {horizontal: :left})
+
+      # Header
+      headings = [
+        "Report",
+        "Location",
+        "Branch",
+        "Version",
+        "ID",
+        "From",
+        "To",
+        "Duration (sec)"
+      ]
+      sheet.add_row headings, style: [head_style]*headings.count
+
+      NaturalSort.version_sort(by_branch.keys).each do |branch|
 
         # Data rows
         failures = by_branch[branch]
-        if failures.empty?
-          sheet.add_row ['No failures'], style: [text_style]
-          next
-        end
         failures.each do |fail|
           if fail[:duration].nil?
             fail_stop =  '--'
             fail_duration = '--'
           else
             fail_stop = fail[:start] + fail[:duration]
-            fail_duration = humanize_duration(fail[:duration])
+            fail_duration = duration_seconds(fail[:duration])
           end
 
-          sheet.add_row [
-            fail[:id],
-            fail[:start].to_s,
-            fail_stop.to_s,
-            fail_duration
-          ], style: [data_style]*4
+          sheet.add_row(
+            [
+              meta[:start].strftime('%-m/%-d/%Y'),
+              'Solano',
+              branch,
+              branch.split('_').first,
+              fail[:id],
+              fail[:start].strftime('%Y-%m-%d %H:%M:%S'),
+              fail_stop.strftime('%Y-%m-%d %H:%M:%S'),
+              fail_duration
+            ],
+            types: [
+              :string,
+              :string,
+              :string,
+              :string,
+              :string,
+              nil,
+              nil,
+              :integer
+            ])
         end
       end
     end
@@ -102,14 +123,19 @@ module SolanoStatisticsWriter
     ## XLSX layout
     wb.add_worksheet(name: "Summary") do |sheet|
       ## Header rows
-      head_style = sheet.styles.add_style(b: true, alignment: {horizontal: :center})
+      head_style = sheet.styles.add_style(
+        b: true,
+        alignment: {
+          horizontal: :center,
+          vertical: :justify
+        })
       data_style = sheet.styles.add_style(alignment: {horizontal: :right})
       text_style = sheet.styles.add_style(alignment: {horizontal: :left})
 
       header1 = formatted_dates.each_with_object([]){|d, ary| ary << d; ary << ''}
       header1.unshift "Branch"
 
-      header2 = ['# Fail', 'Red time']*7
+      header2 = ['# Fail', "Red time (hrs)"]*7
       header2.unshift nil
 
       sheet.add_row header1, style: [head_style]*15
@@ -122,14 +148,14 @@ module SolanoStatisticsWriter
       sheet.merge_cells("A1:A2")
 
       ## Data rows
-      NaturalSort.natural_sort(by_branch.keys).each do |branch|
+      NaturalSort.version_sort(by_branch.keys).each do |branch|
         by_date = by_branch[branch]
         row = [branch]
 
         dates.each do |dt|
           day_stats = by_date[dt] || {fail_count: 0, red_time: 0.days}
           fail_count = day_stats[:fail_count] || 0
-          red_time = humanize_duration(day_stats[:red_time] || 0.days)
+          red_time = duration_hours(day_stats[:red_time] || 0.days)
           row << fail_count
           row << red_time
         end
@@ -144,6 +170,7 @@ module SolanoStatisticsWriter
 
   def self.add_meta(wb, data)
     meta = data[:meta]
+    meta[:branches] = NaturalSort.version_sort(meta[:branches])
 
     wb.add_worksheet(name: "Meta") do |sheet|
       key_style = sheet.styles.add_style(b: true)
@@ -161,11 +188,20 @@ module SolanoStatisticsWriter
     end
   end
 
-  def self.humanize_duration(d)
+  def self.duration_colon(d)
     total_seconds = (d / 1.second).to_f.round
     seconds = total_seconds % 60
     minutes = (total_seconds/60) % 60
     hours = (total_seconds/3600) 
     format("%02d:%02d:%02d", hours, minutes, seconds)
   end
+
+  def self.duration_seconds(d)
+    total_seconds = (d / 1.second).to_f.round
+  end
+
+  def self.duration_hours(d)
+    total_seconds = (d / 3600.second).to_f.round(2)
+  end
+
 end
