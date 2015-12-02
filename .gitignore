@@ -3,5 +3,6 @@
 *.bkp
 *.tmp
 secrets.yml
+config.yml
 /data/
 /output/
