@@ -9,7 +9,8 @@ def email_all
   emailer = SolanoReportEmailer.new(solano['user'], solano['password'])
 
   emailer.login
-  emailer.scrape_branch_links
+  # emailer.email_all_csvs
+  emailer.driver.quit
 end
 
 email_all

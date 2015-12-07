@@ -56,6 +56,11 @@ class SolanoReportEmailer
     wait_to_leave_page
   end
 
+  def email_all_csvs
+    urls = scrape_branch_links
+    urls.values.each{ |url| email_csv(url) }
+  end
+
   def scrape_branch_links(rgx = /^([0-9]{3}(_[0-9]+){0,2}_release|master)$/)
     wait_for_page_load
 
@@ -73,7 +78,34 @@ class SolanoReportEmailer
   end
 
   def email_csv(branch_url)
+    # exportSessionCSV: function(e) {
+    #     var t = this,
+    #         s = $(e.target);
+    #     t.disableExport || (t.disableExport = !0, setTimeout(function() {
+    #         t.disableExport = !1
+    #     }, 3e4), $.ajax({
+    #         type: "POST",
+    #         url: "/api/v2/session_history/csv_export",
+    #         dataType: "JSON",
+    #         data: {
+    #             days: s.data("days"),
+    #             id: t.sessionHistory.relatedSessionId
+    #         }
+    #     }).done(function(e) {
+    #         SolanoCI.Main.helpers.updateFlash(e.success, "success")
+    #     }).fail(function(e) {
+    #         SolanoCI.Main.helpers.updateFlash(JSON.parse(e.responseText).explanation, "error")
+    #     }))
+    # },
     session_id = branch_url.path.split('/').last
-    req_data = {days: '30', id: session_id}
+    req_data = JSON.dump({days: '30', id: session_id})
+    @driver.execute_script <<-JSPOST
+      $.ajax({
+        type: 'POST',
+        url: '/api/v2/session_history/csv_export',
+        dataType: 'JSON',
+        data: #{req_data}
+      });
+    JSPOST
   end
 end
