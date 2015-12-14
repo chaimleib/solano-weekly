@@ -38,4 +38,4 @@ def write_xlsx(start=nil)
   )
 end
 
-write_xlsx
+write_xlsx(ARGV.first)
