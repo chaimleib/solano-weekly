@@ -44,6 +44,13 @@ class SolanoReportEmailer
     }
   end
 
+  def wait_for_jquery
+    wait = Selenium::WebDriver::Wait.new(timeout: 20)
+    wait.until {
+      @driver.execute_script("return jQuery.active == 0")
+    }
+  end
+
   def login
     @driver.navigate.to @host
     user_field = @driver[name: 'user[email]']
@@ -58,7 +65,11 @@ class SolanoReportEmailer
 
   def email_all_csvs
     urls = scrape_branch_links
-    urls.values.each{ |url| email_csv(url) }
+    urls.each do |branch, url|
+      email_csv(url)
+      # puts "POST for: #{branch}"
+    end
+    wait_for_jquery
   end
 
   def scrape_branch_links(rgx = /^([0-9]{3}(_[0-9]+){0,2}_release|master)$/)
@@ -73,8 +84,12 @@ class SolanoReportEmailer
 
     filtered_links = links.select{|b| b.text =~ rgx}
     urls = filtered_links.each_with_object({}) {|b,h|
-      h[b.text] = URI.parse b['href']
+      branch = b['text']
+      h[branch] = URI.parse b['href']
+      # puts "  Found: #{branch}"
     }
+    # puts "#{urls.count} branches found"
+    urls
   end
 
   def email_csv(branch_url)
