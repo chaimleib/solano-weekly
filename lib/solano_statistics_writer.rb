@@ -76,11 +76,12 @@ module SolanoStatisticsWriter
         failures = by_branch[branch]
         failures.each do |fail|
           if fail[:duration].nil?
-            fail_stop =  '--'
-            fail_duration = '--'
+            fail_stop_str =  '--'
+            fail_duration_str = '--'
           else
             fail_stop = fail[:start] + fail[:duration]
-            fail_duration = duration_seconds(fail[:duration])
+            fail_stop_str = fail_stop.strftime('%Y-%m-%d %H:%M:%S')
+            fail_duration_str = duration_seconds(fail[:duration])
           end
 
           sheet.add_row(
@@ -91,8 +92,8 @@ module SolanoStatisticsWriter
               branch.split('_').first,
               fail[:id],
               fail[:start].strftime('%Y-%m-%d %H:%M:%S'),
-              fail_stop.strftime('%Y-%m-%d %H:%M:%S'),
-              fail_duration
+              fail_stop_str,
+              fail_duration_str
             ],
             types: [
               :string,
@@ -102,7 +103,7 @@ module SolanoStatisticsWriter
               :string,
               nil,
               nil,
-              :integer
+              nil
             ])
         end
       end
