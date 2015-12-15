@@ -5,6 +5,7 @@ gem 'activesupport'
 gem 'tzinfo-data'
 gem 'axlsx'
 gem 'fileutils'
+gem 'google-api-client'
 
 gem 'awesome_print'
 gem 'pry'
