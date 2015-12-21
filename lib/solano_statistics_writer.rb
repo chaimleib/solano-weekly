@@ -12,6 +12,8 @@ module SolanoStatisticsWriter
     title = "Solano - Week of #{human_date}"
     puts title
 
+    clip_to_report_period(data: data)
+
     p = Axlsx::Package.new
     wb = p.workbook
     
@@ -30,6 +32,21 @@ module SolanoStatisticsWriter
     puts "  => #{ofile}"
   end
 
+  def self.clip_to_report_period(data: {})
+    # Fill in nil failure durations so that '--' doesn't appear in output.
+    meta = data[:meta]
+    by_branch = data[:fail_times]
+    by_branch.each do |(branch_name, branch_failures)|
+      branch_failures.each do |fail|
+        if fail[:duration].nil?
+          puts "INFO: Failure started at #{fail[:start]} and still in progress."
+          fail_end =  meta[:start] + meta[:duration]
+          fail[:duration] = fail_end - fail[:start]
+          puts "  => Clipping failure duration to #{duration_hours(fail[:duration].seconds)} hours, the end of the report period (#{fail_end})"
+        end
+      end
+    end
+  end
 
   def self.write_fail_times(data: {}, ofile: nil)
     write_weekly_report(data: data, ofile: ofile) do |wb, data|
