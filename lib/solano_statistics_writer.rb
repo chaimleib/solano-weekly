@@ -7,6 +7,7 @@ module SolanoStatisticsWriter
   def self.write_weekly_report(data: {}, ofile: nil, &content)
     ## Setup
     meta = data[:meta]
+    meta[:messages] ||= []
     dt = meta[:start].in_time_zone(meta[:tz])
     human_date = dt.strftime("%x (%Z)").gsub('/', '-')
     title = "Solano - Week of #{human_date}"
@@ -39,16 +40,25 @@ module SolanoStatisticsWriter
     by_branch.each do |(branch_name, branch_failures)|
       branch_failures.each do |fail|
         if fail[:duration].nil?
-          puts "INFO: Failure started at #{fail[:start]} and still in progress."
+          # The failure is still in progress. Clip duration to fail_end.
           fail_end =  meta[:start] + meta[:duration]
           fail[:duration] = fail_end - fail[:start]
-          puts "  => Clipping failure duration to #{duration_hours(fail[:duration].seconds)} hours, the end of the report period (#{fail_end})"
+          dur_str = duration_string(fail[:duration].seconds)
+
+          message = [
+            "INFO: On #{branch_name}, a failure started at #{fail[:start]} and is still in progress.",
+            "  => Clipping failure duration to #{dur_str}, the end of the report period (#{fail_end})"
+            ].join("\n")
+          puts message
+          meta[:messages] << message
         end
       end
     end
   end
 
   def self.write_fail_times(data: {}, ofile: nil)
+    meta = data[:meta]
+    meta[:messages] ||= []
     write_weekly_report(data: data, ofile: ofile) do |wb, data|
       add_fail_times(wb, data)
       add_meta(wb, data)
@@ -56,6 +66,8 @@ module SolanoStatisticsWriter
   end
 
   def self.write_summary(data: {}, ofile: nil)
+    meta = data[:meta]
+    meta[:messages] ||= []
     write_weekly_report(data: data, ofile: ofile) do |wb, data|
       add_summary(wb, data)
       add_meta(wb, data)
@@ -222,4 +234,17 @@ module SolanoStatisticsWriter
     total_seconds = (d / 3600.second).to_f.round(2)
   end
 
+  def self.duration_days_floor(d)
+    total_seconds = (d / (24*3600).second).to_f.floor
+  end
+
+  def self.duration_string(d)
+    dur_days = duration_days_floor(d.seconds)
+    dur_hours = duration_hours(d.seconds - dur_days.days)
+    dur_str = [
+      dur_days.zero? ? nil : "#{dur_days} day".pluralize(dur_days),
+      dur_days.zero? ? nil : "and",
+      "#{dur_hours} hours"
+    ].join(" ")
+  end
 end
