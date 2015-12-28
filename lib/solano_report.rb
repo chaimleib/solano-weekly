@@ -1,7 +1,8 @@
 require 'csv'
 require 'active_support/all'
-
-UTC = TZInfo::Timezone.get("UTC")
+require_relative './core_extensions/numeric'
+require_relative './utils/time'
+include Utils::Time
 
 class SolanoReport < Array
   class Converter
@@ -85,6 +86,26 @@ class SolanoReport < Array
   SolanoBuild = Struct.new("SolanoBuild", :_raw, *members) do # rich values
     def finished_at
       created_at + duration
+    end
+
+    def days(tz)
+      utc = created_at.in_time_zone(UTC)
+      midnight = utc.in_time_zone(tz).midnight
+      rv = [midnight.iso8601]
+      while (midnight += 1.day) < finished_at do
+        rv << midnight.iso8601
+      end
+      rv
+    end
+
+    def include_time?(t)
+      created_at <= t && t < finished_at
+    end
+
+    def overlaps_time_range?(start, stop)
+      include_time?(start) ||
+        include_time?(stop) ||
+        (start <= created_at && created_at < stop)
     end
   end
 
@@ -241,25 +262,20 @@ class SolanoReport < Array
   end
 
   def group_by_date(tz=UTC)
-    each_with_object({}){ |build, retval|
-      utc = build.created_at.in_time_zone(UTC)
-      local = utc.in_time_zone(tz)
-      key = local.midnight.iso8601
-      if !retval.has_key? key
-        retval[key] = self.class.new
+    each_with_object({}) do |build, retval|
+      build.days(tz).each do |day|
+        retval[day] ||= self.class.new
+        retval[day] << build
       end
-      retval[key] << build
-    }
+    end
   end
 
   def group_by_branch
-    each_with_object({}){ |build, retval|
+    each_with_object({}) do |build, retval|
       m = build.branch
-      if !retval.has_key? m
-        retval[m] = self.class.new
-      end
+      retval[m] ||= self.class.new
       retval[m] << build
-    }
+    end
   end
 
   def sort(*args, **kwargs)
@@ -281,10 +297,7 @@ class SolanoReport < Array
   def select_period(start:DateTime.now, duration: 1.day)
     start = start.in_time_zone(UTC)
     stop = start + duration
-    select do |build|
-      utc = build.created_at.in_time_zone(UTC)
-      start <= utc && utc <= stop
-    end
+    select{ |build| build.overlaps_time_range?(start, stop) }
   end
 
   def status_duration(status: :failed, parent: [], start: nil, duration: nil)
@@ -296,8 +309,10 @@ class SolanoReport < Array
     return 0.0.days if focus.empty?
 
     retval = 0.0.seconds
+
+    # if present, add the failure overlapping the start of the report period
     if start.present?
-      p = parent.prev_build focus.first
+      p = parent.prev_build focus.first  # the build right before focus.first
       utc = focus.first.created_at.in_time_zone(UTC)
       start = start.in_time_zone(UTC)
       stop = start + duration
@@ -306,8 +321,10 @@ class SolanoReport < Array
         retval += interval
       end
     end
+
+    # add other failures that were created in the report period
     focus.each do |build|
-      n = parent.next_build build
+      n = parent.next_build build  # the next build
       if n.present?
         n_utc = n.created_at.in_time_zone(UTC)
         n_utc = stop if duration.present? && stop <= n_utc
@@ -321,6 +338,7 @@ class SolanoReport < Array
       interval = (n_utc - utc).seconds
       retval += interval
     end
+
     retval = (retval/86400.0.seconds).days
   end
 

@@ -1,8 +1,10 @@
 module SolanoStatisticsWriter
-  require_relative './natural_sort'
-  require_relative './solano_report'
   require 'axlsx'
   require 'pry'
+  require_relative './natural_sort'
+  require_relative './solano_report'
+  require_relative './utils/time'
+  include Utils::Time
 
   def self.write_weekly_report(data: {}, ofile: nil, &content)
     ## Setup
@@ -216,35 +218,5 @@ module SolanoStatisticsWriter
         sheet.add_row [k.to_s, v.to_s], style: [key_style, nil]
       end
     end
-  end
-
-  def self.duration_colon(d)
-    total_seconds = (d / 1.second).to_f.round
-    seconds = total_seconds % 60
-    minutes = (total_seconds/60) % 60
-    hours = (total_seconds/3600) 
-    format("%02d:%02d:%02d", hours, minutes, seconds)
-  end
-
-  def self.duration_seconds(d)
-    total_seconds = (d / 1.second).to_f.round
-  end
-
-  def self.duration_hours(d)
-    total_seconds = (d / 3600.second).to_f.round(2)
-  end
-
-  def self.duration_days_floor(d)
-    total_seconds = (d / (24*3600).second).to_f.floor
-  end
-
-  def self.duration_string(d)
-    dur_days = duration_days_floor(d.seconds)
-    dur_hours = duration_hours(d.seconds - dur_days.days)
-    dur_str = [
-      dur_days.zero? ? nil : "#{dur_days} day".pluralize(dur_days),
-      dur_days.zero? ? nil : "and",
-      "#{dur_hours} hours"
-    ].join(" ")
   end
 end
