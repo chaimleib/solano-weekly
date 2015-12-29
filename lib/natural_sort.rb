@@ -43,6 +43,8 @@ module NaturalSort
     l.sort{|a, b| natural_cmp(a, b)}
   end
 
+  # Versionizer = /([^0-9\._]+)|([\._]+)|([0-9]+)/
+
   def self.version_cmp(a, b)
     ax = []
     bx = []
