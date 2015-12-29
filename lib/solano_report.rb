@@ -1,8 +1,8 @@
 require 'csv'
 require 'active_support/all'
 require_relative './core_extensions/all'
-require_relative './utils/time'
-include Utils::Time
+require_relative './utils/duration'
+include Utils::Duration
 
 class SolanoReport < Array
   class Converter

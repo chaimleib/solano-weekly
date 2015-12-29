@@ -32,9 +32,9 @@ class SolanoReportEmailer
   end
 
   def wait_to_leave_page
-    old_url = URI.parse(@driver.current_url)
+    old_url = @driver.current_url
     wait = Selenium::WebDriver::Wait.new(timeout: 20)
-    wait.until{ URI.parse(@driver.current_url) != old_url }
+    wait.until{ URI.parse(@driver.current_url) != URI.parse(old_url) }
   end
 
   def wait_for_page_load

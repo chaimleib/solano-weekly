@@ -1,5 +1,5 @@
 module Utils
-  module Time
+  module Duration
     require 'active_support/all'
 
     UTC = TZInfo::Timezone.get("UTC")

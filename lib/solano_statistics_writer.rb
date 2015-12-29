@@ -3,8 +3,8 @@ module SolanoStatisticsWriter
   require 'pry'
   require_relative './natural_sort'
   require_relative './solano_report'
-  require_relative './utils/time'
-  include Utils::Time
+  require_relative './utils/duration'
+  include Utils::Duration
 
   def self.write_weekly_report(data: {}, ofile: nil, &content)
     ## Setup
