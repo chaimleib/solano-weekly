@@ -5,5 +5,3 @@ module CoreExtensions
     end
   end
 end
-
-Numeric.include CoreExtensions::Numeric

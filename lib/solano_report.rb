@@ -1,6 +1,6 @@
 require 'csv'
 require 'active_support/all'
-require_relative './core_extensions/numeric'
+require_relative './core_extensions/all'
 require_relative './utils/time'
 include Utils::Time
 
